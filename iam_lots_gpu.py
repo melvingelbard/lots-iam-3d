@@ -7,7 +7,7 @@ from manipulation import *
 import sys
 
 def main():
-    do_melvin("coucou")
+    a = 5*6
 
 
 if __name__ == "__main__":
