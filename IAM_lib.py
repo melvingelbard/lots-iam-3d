@@ -113,8 +113,45 @@ def get_area(x_c, y_c, x_dist, y_dist, img):
     if x_low >= x_len: x_low = x_len
     if y_left < 0: y_left = 0
     if y_rght >= y_len: y_rght = y_len
-    
-    #print('IDX: ' + str(int(x_top)) + ', ' + str(int(x_low)) + ', ' + str(int(y_left)) + ', ' + str(int(y_rght)))
+
+
     area = img[int(x_top):int(x_low+1),int(y_left):int(y_rght+1)]
     
     return area
+
+
+def get_volume(x_c, y_c, z_c, x_dist, y_dist, z_dist, brain):
+    [x_len, y_len, z_len] = brain.shape
+    even_x = np.mod(x_dist, 2) - 2;
+    even_y = np.mod(y_dist, 2) - 2;
+    even_z = np.mod(z_dist, 2) - 2;
+
+    x_top = x_c - np.floor(x_dist / 2) - (even_x + 1);
+    x_low = x_c + np.floor(x_dist / 2);
+    y_left = y_c - np.floor(y_dist / 2) - (even_y + 1);
+    y_rght = y_c + np.floor(y_dist / 2);
+    z_front = z_c - np.floor(z_dist / 2) - (even_z + 1);
+    z_back = z_c + np.floor(z_dist / 2);
+
+    if x_top < 0: x_top = 0
+    if x_low >= x_len: x_low = x_len
+    if y_left < 0: y_left = 0
+    if y_rght >= y_len: y_rght = y_len
+    if z_front < 0: z_front = 0
+    if z_back >= z_len: z_back = z_len
+
+    #print('IDX: ' + str(int(x_top)) + ', ' + str(int(x_low)) + ', ' + str(int(y_left)) + ', ' + str(int(y_rght)) + ', ' + str(int(z_front)) + ', ' + str(int(z_back)))
+    #print("From x:", x_c, "and y", y_c, "and z", z_c)
+
+    volume = brain[int(x_top):int(x_low+1),int(y_left):int(y_rght+1),int(z_front):int(z_back+1)]
+
+    return volume
+
+
+def get_wmh_avg(normalised_patch, scan_mean, scan_std):
+    FLAIRstd = np.true_divide((normalised_patch-scan_mean), scan_std)
+    WMH = np.zeros(mri_data.shape)
+    iWMH = np.zeros(size(FLAIRdata))
+
+    iWMH(flair >= scan_mean + (1.69 * nanstd(flair(:))))=1; % Captures only the very intense lesions
+    WMH(flair >= scan_mean + (1.3 * nanstd(flair(:))))=1; % Here we have the WMH segmentation including less intense lesions
