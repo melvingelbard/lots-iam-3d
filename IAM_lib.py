@@ -90,6 +90,26 @@ def cu_age_value(arrays, results):
 
 ## NON-CUDA FUNCTIONS
 
+def set_mean_sample_number(num_samples_all):
+    num_mean_samples_all = []
+    for sample in num_samples_all:
+        if sample == 64:
+            num_mean_samples_all.append(16)
+        elif sample == 128:
+            num_mean_samples_all.append(32)
+        elif sample == 256:
+            num_mean_samples_all.append(32)
+        elif sample == 512:
+            num_mean_samples_all.append(64)
+        elif sample == 1024:
+            num_mean_samples_all.append(128)
+        elif sample == 2048:
+            num_mean_samples_all.append(128)
+        else:
+            raise ValueError("Number of samples must be either 64, 128, 256, 512, 1024 or 2048!")
+            return 0
+    return num_mean_samples_all
+
 def create_output_folders(dirOutput, mri_code, version):
     dirOutData = dirOutput + '/' + mri_code + '/' + version
     dirOutDataCom = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/'
@@ -102,17 +122,17 @@ def create_output_folders(dirOutput, mri_code, version):
     os.makedirs(dirOutDataCombined)
 
 def keep_relevant_slices(mri_data):
-    z_len = mri_data.shape[2]
+    original_index_end = mri_data.shape[2]
     index_start = 0
-    index_end = z_len-1
+    index_end = original_index_end-1
 
-    for index in range(0, z_len):
+    for index in range(0, original_index_end):
         if np.count_nonzero(~np.isnan(mri_data[:, :, index])) == 0:
             index_start = index
         else:
             break
 
-    for index in range(z_len-1, -1, -1):
+    for index in range(original_index_end - 1, -1, -1):
         if np.count_nonzero(~np.isnan(mri_data[:, :, index])) == 0:
             index_end = index
         else:
@@ -120,7 +140,19 @@ def keep_relevant_slices(mri_data):
     print("Only considering relevant slices between indices: [" + str(index_start) + "-" + str(index_end) + "]")
     mri_data = mri_data[:, :, index_start:index_end+1]
     mri_data = np.nan_to_num(mri_data)
-    return mri_data
+    return mri_data, index_start, original_index_end
+
+
+def reshape_original_dimensions(modified_array, index_start, original_index_end):
+    [x_len, y_len, z_len] = modified_array.shape
+    index_end = original_index_end - z_len - index_start
+    top_empty_slices = np.zeros([x_len, y_len, index_start])
+    bottom_empty_slices = np.zeros([x_len, y_len, index_end])
+    reshaped_array = np.concatenate((top_empty_slices,modified_array), axis=2)
+    reshaped_array = np.concatenate((reshaped_array, bottom_empty_slices), axis=2)
+    return reshaped_array
+
+
 
 
 

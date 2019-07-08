@@ -157,23 +157,8 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
     ''' num_samples_all = [64, 128, 256, 512, 1024, 2048] '''
     ''' num_mean_samples_all = [16, 32, 32, 64, 128, 128] '''
     num_samples_all = num_sample
-    num_mean_samples_all = []
-    for sample in num_samples_all:
-        if sample == 64:
-            num_mean_samples_all.append(16)
-        elif sample == 128:
-            num_mean_samples_all.append(32)
-        elif sample == 256:
-            num_mean_samples_all.append(32)
-        elif sample == 512:
-            num_mean_samples_all.append(64)
-        elif sample == 1024:
-            num_mean_samples_all.append(128)
-        elif sample == 2048:
-            num_mean_samples_all.append(128)
-        else:
-            raise ValueError("Number of samples must be either 64, 128, 256, 512, 1024 or 2048!")
-            return 0
+    num_mean_samples_all = set_mean_sample_number(num_samples_all)
+
 
     print("--- PARAMETERS - CHECKED ---")
     print('Output file dir: ' + output_filedir)
@@ -233,10 +218,9 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
 
                 mri_data = sio.loadmat(row[0] + "/" + row[1] + "/" + row[2] + "/flair.mat")     # Loading FLAIR
                 mri_data = mri_data["flair"]
-                [x_len, y_len, z_len] = mri_data.shape
 
                 ## Remove empty slices at the top and bottom of mri volume (z-axis)
-                mri_data = keep_relevant_slices(mri_data)
+                mri_data, index_start, original_index_end = keep_relevant_slices(mri_data)
 
                 ## Get MRI measurements
                 [x_len, y_len, z_len] = mri_data.shape
@@ -661,6 +645,13 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         fig2.savefig(dirOutData + str(zz) + '_combined.jpg', dpi=100)
                         print('Saving files: ' + dirOutData + str(zz) + '_combined.jpg')
                         plt.close()
+
+                ## Reshaping into original dimensions
+                combined_age_map_mri = reshape_original_dimensions(combined_age_map_mri, index_start, original_index_end)
+                combined_age_map_mri_mult = reshape_original_dimensions(combined_age_map_mri_mult, index_start, original_index_end)
+                combined_age_map_mri_normed = reshape_original_dimensions(combined_age_map_mri_normed, index_start, original_index_end)
+                combined_age_map_mri_mult_normed = reshape_original_dimensions(combined_age_map_mri_mult_normed, index_start, original_index_end)
+
 
                 ''' Save data in *.mat '''
                 dirOutData = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python'
