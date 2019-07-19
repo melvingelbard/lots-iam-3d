@@ -166,7 +166,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
     print('Patch size(s): ' + str(patch_size))
     print('Number of samples (all): ' + str(num_samples_all))
     print('Number of mean samples (all): ' + str(num_mean_samples_all))
-    print('Use patch thresholding: ' + str(thrsh_patches))
+    print('Use patch selection: ' + str(thrsh_patches))
     print('Save JPEGs? ' + str(save_jpeg))
     print("--- PARAMETERS - CHECKED ---\n")
 
@@ -355,6 +355,8 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         x, y, z = index_chosen
                         volume = get_volume(x, y, z, patch_size[xyz], patch_size[xyz], patch_size[xyz], mri_data)
                         if volume.size == patch_size[xyz] * patch_size[xyz] * patch_size[xyz]:
+                            if np.random.randint(low=1, high=10)/10 < (100/(x*y*z)) * num_samples:
+                                break
                             if thrsh_patches != None:
                                 thrsh_filter = threshold_filter(thresholded_brain, patch_size[xyz], index_chosen, thrsh_patches)
                                 if thrsh_filter == True:
@@ -366,11 +368,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                                 target_patches.append(volume)
                                 index_debug += 1
 
-
-                    target_patches_np = np.array(target_patches[:500])
-                    np.random.shuffle(target_patches_np)
-                    target_patches_np = target_patches_np[0:num_samples,:,:]
-
+                    target_patches_np = get_shuffled_patches(target_patches, num_samples)
                     print('Sampling finished: ' + ' with: ' + str(index_debug) + ' samples from: '
                             + str(whole_volume))
                     if thrsh_patches != None:

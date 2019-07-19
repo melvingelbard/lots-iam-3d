@@ -1,13 +1,14 @@
 from numba import cuda
 import numpy as np
 import math, numba, cv2
-import os
+import os, random
 import skimage.morphology as skimorph
 import skimage.filters as skifilters
 import matplotlib.pyplot as plt
 import scipy.io as sio
 from scipy import signal
 import code
+from timeit import default_timer as timer
 
 ## CUDA FUNCTIONS
 
@@ -269,6 +270,10 @@ def threshold_filter(thresholded_brain, patch_size, index_chosen, threshold):
     return True
 
 
+def get_shuffled_patches(target_patches_list, num_samples):
+    shuffled_list = [target_patches_list[index] for index in random.sample(range(len(target_patches_list)), num_samples)]
+    shuffled_array = np.asarray(shuffled_list)
+    return shuffled_array
 
 def get_slice_age_map(patch_size, mat_contents, mask_slice):
     slice_age_map = mat_contents['slice_age_map']
