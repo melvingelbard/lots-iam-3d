@@ -28,7 +28,7 @@ num_samples_all = [64]
 alpha = 0.5
 
 ## Thresholds the target patches to prevent including patches containing hyper-intensities.
-## Default : threshold_patches = False.
+## Default : threshold_patches = None.
 thrsh_patches = None
 
 ## Threshold value for cutting of probability values of brain masks, if probability masks
