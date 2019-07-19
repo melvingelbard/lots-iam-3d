@@ -154,9 +154,6 @@ def reshape_original_dimensions(modified_array, index_start, original_index_end)
 
 
 
-
-
-
 def kernel_sphere(vol):
     if vol == 1 or vol == 2:
         return np.array([[1]])
@@ -233,7 +230,7 @@ def get_thresholded_brain(mri_data):
     WMH = np.zeros(mri_data.shape)
     iWMH = np.zeros(mri_data.shape)
 
-    WMH[np.nan_to_num(mri_data) >= (scan_mean + (1.3 * scan_std))] = 1       # Less intense regions
+    WMH[np.nan_to_num(mri_data) >= (scan_mean + (1.282 * scan_std))] = 1       # Less intense regions
     iWMH[np.nan_to_num(mri_data) >= (scan_mean + (1.69 * scan_std))] = 1     # Very intense regions
 
     for zz in range(WMH.shape[2]):
@@ -262,8 +259,8 @@ def gaussian_3d(thresholded_brain):
     return signal.convolve(thresholded_brain, kernel, mode="same")
 
 
-def threshold_filter(thresholded_brain, patch_size, index_chosen):
-    threshold = (patch_size*patch_size*patch_size) * 0.2        ## 20% of WMH
+def threshold_filter(thresholded_brain, patch_size, index_chosen, threshold):
+    threshold = (patch_size*patch_size*patch_size) * threshold
     x, y, z = index_chosen
     WMH_volume = get_volume(x, y, z, patch_size, patch_size, patch_size, thresholded_brain)
 

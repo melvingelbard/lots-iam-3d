@@ -1,8 +1,8 @@
 ## General output full path (note to user: you can change this variable)
-output_filedir = "D:/Edinburgh/dissertation/results_threshold/"
+output_filedir = "D:/Edinburgh/dissertation/results_t2/"
 
 ## Name of csv file (note to user: you can change this variable)
-csv_filename = "input_3d.csv"
+csv_filename = "input.csv"
 
 ## Size of source and target patches.
 ## Must be in the form of python's list data structure.
@@ -29,7 +29,7 @@ alpha = 0.5
 
 ## Thresholds the target patches to prevent including patches containing hyper-intensities.
 ## Default : threshold_patches = False.
-thrsh_patches = True
+thrsh_patches = None
 
 ## Threshold value for cutting of probability values of brain masks, if probability masks
 ## are given instead of binary masks.

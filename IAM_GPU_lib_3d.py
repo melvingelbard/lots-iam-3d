@@ -25,7 +25,7 @@ plt.ioff()
 
 def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8],
                          blending_weights=[0.65,0.2,0.1,0.05], num_sample=[512],
-                         alpha=0.5, thrsh_patches = False, bin_tresh=0.5, save_jpeg=True,
+                         alpha=0.5, thrsh_patches = None, bin_tresh=0.5, save_jpeg=True,
                          delete_intermediary=False):
     '''
     FUNCTION'S SUMMARY:
@@ -340,7 +340,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
 
                     print("Extracting target patches.")
                     ## if thresholding is enabled, get a thresholded volume of the brain (WMH)
-                    if thrsh_patches == True:
+                    if thrsh_patches != None:
                         thresholded_brain = get_thresholded_brain(mri_data)
                         patches_rejected = 0
 
@@ -355,8 +355,8 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         x, y, z = index_chosen
                         volume = get_volume(x, y, z, patch_size[xyz], patch_size[xyz], patch_size[xyz], mri_data)
                         if volume.size == patch_size[xyz] * patch_size[xyz] * patch_size[xyz]:
-                            if thrsh_patches == True:
-                                thrsh_filter = threshold_filter(thresholded_brain, patch_size[xyz], index_chosen)
+                            if thrsh_patches != None:
+                                thrsh_filter = threshold_filter(thresholded_brain, patch_size[xyz], index_chosen, thrsh_patches)
                                 if thrsh_filter == True:
                                     target_patches.append(volume)
                                     index_debug += 1
@@ -367,17 +367,16 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                                 index_debug += 1
 
 
-                    target_patches_np = np.array(target_patches)
+                    target_patches_np = np.array(target_patches[:500])
                     np.random.shuffle(target_patches_np)
                     target_patches_np = target_patches_np[0:num_samples,:,:]
 
                     print('Sampling finished: ' + ' with: ' + str(index_debug) + ' samples from: '
                             + str(whole_volume))
-                    if thrsh_patches:
+                    if thrsh_patches != None:
                         percentage_rejected = round((patches_rejected/index_debug)*100, 1)
                         print("Number of patches rejected: " + str(patches_rejected) + " (" + str(percentage_rejected) + "%).")
                     volume = []
-
 
                     ''' Reshaping array data '''
                     volume_source_patch_cuda_all = np.reshape(volume_source_patch,(volume_source_patch.shape[0],
@@ -651,7 +650,6 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                 combined_age_map_mri_mult = reshape_original_dimensions(combined_age_map_mri_mult, index_start, original_index_end)
                 combined_age_map_mri_normed = reshape_original_dimensions(combined_age_map_mri_normed, index_start, original_index_end)
                 combined_age_map_mri_mult_normed = reshape_original_dimensions(combined_age_map_mri_mult_normed, index_start, original_index_end)
-
 
                 ''' Save data in *.mat '''
                 dirOutData = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python'
