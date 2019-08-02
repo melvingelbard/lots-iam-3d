@@ -111,11 +111,11 @@ def set_mean_sample_number(num_samples_all):
             return 0
     return num_mean_samples_all
 
-def create_output_folders(dirOutput, mri_code, version):
-    dirOutData = dirOutput + '/' + mri_code + '/' + version
-    dirOutDataCom = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/'
-    dirOutDataPatch = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Patch/'
-    dirOutDataCombined = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Combined/'
+def create_output_folders(dirOutput, mri_code):
+    dirOutData = dirOutput + '/' + mri_code
+    dirOutDataCom = dirOutput + '/' + mri_code + '/IAM_combined_python/'
+    dirOutDataPatch = dirOutput + '/' + mri_code + '/IAM_combined_python/Patch/'
+    dirOutDataCombined = dirOutput + '/' + mri_code + '/IAM_combined_python/Combined/'
 
     os.makedirs(dirOutData)
     os.makedirs(dirOutDataCom)

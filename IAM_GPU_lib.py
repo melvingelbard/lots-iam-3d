@@ -226,7 +226,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                 ''' Create output folder(s) '''
                 dirOutData = dirOutput + '/' + mri_code + '/' + version
                 dirOutDataCom = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/'
-                dirOutDataFin = dirOutput + '/' + mri_code + '/' + version + '/IAM_GPU_nifti_python/'
+                dirOutDataFin = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/'
                 dirOutDataPatch = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Patch/'
                 dirOutDataCombined = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Combined/'
                 try:

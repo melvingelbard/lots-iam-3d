@@ -1,6 +1,3 @@
-## General output full path (note to user: you can change this variable)
-output_filedir = "D:/Edinburgh/dissertation/results_t2/"
-
 ## Name of csv file (note to user: you can change this variable)
 csv_filename = "input.csv"
 
@@ -29,7 +26,7 @@ alpha = 0.5
 
 ## Thresholds the target patches to prevent including patches containing hyper-intensities.
 ## Default : threshold_patches = None.
-thrsh_patches = None
+thrsh_patches = 0.05
 
 ## Threshold value for cutting of probability values of brain masks, if probability masks
 ## are given instead of binary masks.

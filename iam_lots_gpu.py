@@ -12,8 +12,7 @@ def main():
 
     ## NOTE: Put parameters in iam_params.py
     ## Parameters are loaded by "from iam_params import *" line
-    iam_lots_gpu_compute(output_filedir   = output_filedir,
-                     csv_filename     = csv_filename,
+    iam_lots_gpu_compute(csv_filename = csv_filename,
                      patch_size       = patch_size,
                      blending_weights = blending_weights,
                      num_sample       = num_samples_all,
