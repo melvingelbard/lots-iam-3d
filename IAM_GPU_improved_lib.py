@@ -26,7 +26,7 @@ from PIL import Image
 # Turn interactive plotting off
 plt.ioff()
 
-def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8],
+def iam_lots_gpu_compute(csv_filename="", patch_size=[1,2,4,8],
                          blending_weights=[0.65,0.2,0.1,0.05], num_sample=[512],
                          alpha=0.5, thrsh_patches = True, bin_tresh=0.5, save_jpeg=True,
                          delete_intermediary=False, nawm_preprocessing=False):
@@ -44,7 +44,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
 
     Format of the CSV input file (NOTE: spaces are used to make the format clearer):
 
-        path_to_mri_codebase_folder, MRI_mri_code_name, path_FLAIR, path_ICV, path_CSF,
+        path_to_mri_codebase_folder, mri_code_name, path_FLAIR, path_ICV, path_CSF,
         path_NAWM (optional), path_Cortical (optional)
 
     Example (NOTE: spaces are used to make the format clearer):
@@ -146,7 +146,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
     '''
 
     ## Check availability of input files and output path
-    if output_filedir == "" or csv_filename == "":
+    if csv_filename == "":
         raise ValueError("Please set output folder's name and CSV mri_code filename. See: help(iam_lots_gpu)")
         return 0
 
@@ -182,7 +182,6 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
             return 0
 
     print("--- PARAMETERS - CHECKED ---")
-    print('Output file dir: ' + output_filedir)
     print('CSV mri_code filename: ' + csv_filename)
     print('Patch size(s): ' + str(patch_size))
     print('Number of samples (all): ' + str(num_samples_all))
@@ -196,15 +195,6 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
         print('Number of samples for IAM: ' + str(num_samples))
         print('Number of mean samples for IAM: ' + str(num_mean_samples))
 
-        dirOutput = output_filedir + '_' + str(num_samples) + 's' + str(num_mean_samples) + 'm'
-        print('Output dir: ' + dirOutput + '\n--')
-
-        try:
-            os.makedirs(dirOutput)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
-
         with open(csv_filename, newline='') as csv_file:
             num_subjects = len(csv_file.readlines())
             print('Number of subject(s): ' + str(num_subjects))
@@ -216,34 +206,42 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
             elapsed_times_all = np.zeros((num_subjects))
             elapsed_times_patch_all = np.zeros((num_subjects, len(patch_size)))
             for row in reader:
-                mri_code = row[1]
-                version = row[2]
-                print('--\nNow processing mri_code: ' + mri_code + '; scan number:' + version)
+                mri_code = row[2]
 
-                inputSubjectDir = row[0] + '/' + row[1]
+                dirOutput = row[1]
+                print('Output dir: ' + dirOutput + '\n--')
+
+                try:
+                    os.makedirs(dirOutput)
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise
+
+
+                print('--\nNow processing mri_code: ' + mri_code)
+
+                inputSubjectDir = row[0]
                 print('Input filename (full path): ' + inputSubjectDir)
 
                 ''' Create output folder(s) '''
-                dirOutData = dirOutput + '/' + mri_code + '/' + version
-                dirOutDataCom = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/'
-                dirOutDataFin = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/'
-                dirOutDataPatch = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Patch/'
-                dirOutDataCombined = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Combined/'
+                dirOutData = dirOutput + '/' + mri_code
+                dirOutDataCom = dirOutput + '/' + mri_code + '/IAM_combined_python/'
+                dirOutDataPatch = dirOutput + '/' + mri_code + '/IAM_combined_python/Patch/'
+                dirOutDataCombined = dirOutput + '/' + mri_code + '/IAM_combined_python/Combined/'
                 try:
-                    os.makedirs(dirOutData)
+                    print(dirOutDataCom)
                     os.makedirs(dirOutDataCom)
-                    os.makedirs(dirOutDataFin)
                     os.makedirs(dirOutDataPatch)
                     os.makedirs(dirOutDataCombined)
                 except OSError as e:
                     if e.errno != errno.EEXIST:
                         raise
 
-                mri_mri_code = sio.loadmat(row[0] + "/" + row[1] + "/" + row[2] + "/flair.mat")     # Loading FLAIR
-                mri_mri_code = mri_mri_code["flair"]
-                [x_len, y_len, z_len] = mri_mri_code.shape
+                mri_data = sio.loadmat(row[0])     # Loading FLAIR
+                mri_data = mri_data["flair"]
+                [x_len, y_len, z_len] = mri_data.shape
 
-                one_mri_code = timer()
+                one_mri_data = timer()
                 for xy in range(0, len(patch_size)):
                     print('>>> Processing patch-size: ' + str(patch_size[xy]) + ' <<<\n')
 
@@ -254,7 +252,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                             raise
 
                     one_patch = timer()
-                    for zz in range(0, mri_mri_code.shape[2]):
+                    for zz in range(0, mri_data.shape[2]):
                         print('---> Slice number: ' + str(zz) + ' <---')
 
                         '''
@@ -267,10 +265,10 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         2. brain_slice -->  Brain tissues' information from FLAIR slice.
                         '''
 
-                        mask_slice = np.nan_to_num(mri_mri_code[:, :, zz])
+                        mask_slice = np.nan_to_num(mri_data[:, :, zz])
                         mask_slice[mask_slice > 0] = 1
 
-                        brain_slice = np.nan_to_num(mri_mri_code[:, :, zz])
+                        brain_slice = np.nan_to_num(mri_data[:, :, zz])
 
                         '''
                         -----------------------------------
@@ -333,6 +331,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                             for ix in range(0, int(x_len / patch_size[xy])):
                                 x_c_sources[ix] = (ix * patch_size[xy]) + x_c - 1
 
+
                             ''' Extracting Source Patches '''
                             area_source_patch = np.zeros([1,patch_size[xy],patch_size[xy]])
                             center_source_patch = np.zeros([1,2])
@@ -344,30 +343,36 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                             flag = 1
                             index = 0
                             index_source= 0
-                            for isc in range(0, counter_x):
-                                for jsc in range(0, counter_y):
-                                    icv_source_flag[index] = mask_slice[int(x_c_sources[isc]), int(y_c_sources[jsc])]
 
-                                    if icv_source_flag[index] == 1:     ## If that voxel is inside the okay area of the brain
-
-                                        if flag:
-                                            flag = 0
-                                            temp = np.matrix([x_c_sources[isc], y_c_sources[jsc]])
-                                            center_source_patch[0,:] = temp
-                                            temp = get_area(x_c_sources[isc], y_c_sources[jsc],
-                                                            patch_size[xy], patch_size[xy], brain_slice)
-                                            area_source_patch[0,:,:] = temp
-                                        else:
-                                            temp = np.matrix([x_c_sources[isc], y_c_sources[jsc]])
-                                            center_source_patch = np.concatenate((center_source_patch, temp))
-                                            temp = get_area(x_c_sources[isc], y_c_sources[jsc],
-                                                            patch_size[xy], patch_size[xy], brain_slice)
-                                            temp = np.reshape(temp, (1, patch_size[xy], patch_size[xy]))
-                                            area_source_patch = np.concatenate((area_source_patch, temp))
-
-                                        index_mapping[index] = index_source
-                                        index_source += 1
+                            if patch_size[xy] == 1:
+                                area_source_patch = brain_slice[mask_slice == 1]
+                                area_source_patch = area_source_patch.reshape([area_source_patch.shape[0], 1, 1])
+                                index = source_patch_len
+                                index_source = area_source_patch.shape[0]
+                                icv_source_flag = mask_slice.flatten()
+                                positive_indices = (np.where(brain_slice.flatten() > 0))[0]
+                                index = 0
+                                for i in positive_indices:
+                                    index_mapping[i] = index
                                     index += 1
+
+                            else:
+                                area_source_patch = []
+                                for isc in range(0, counter_x):
+                                    for jsc in range(0, counter_y):
+                                            icv_source_flag[index] = mask_slice[int(x_c_sources[isc]), int(y_c_sources[jsc])]
+                                            if icv_source_flag[index] == 1:
+                                                temp = get_area(x_c_sources[isc], y_c_sources[jsc],
+                                                                patch_size[xy], patch_size[xy], brain_slice)
+                                                area_source_patch.append(temp.tolist())
+                                                index_mapping[index] = index_source
+                                                index_source += 1
+
+                                            index += 1
+                                area_source_patch = np.asarray(area_source_patch)
+
+
+
 
                             icv_source_flag_valid = icv_source_flag_valid[0:index_source]
                             age_values_valid = np.zeros(index_source)
@@ -382,21 +387,25 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                             ''' Extracting Target Patches '''
                             target_patches = []
                             index_debug = 0
-                            index_population = 0
-                            for iii in range(0, x_len):
-                                for jjj in range(0, y_len):
-                                    index_population += 1
-                                    if mask_slice[iii,jjj] != 0 and np.random.rand(1) > TRSH:
-                                        area = get_area(iii, jjj, patch_size[xy], patch_size[xy], brain_slice)
-                                        if area.size == patch_size[xy] * patch_size[xy]:
-                                            target_patches.append(area)
-                                            index_debug += 1
+                            random_array = np.random.randint(10, size=(x_len, y_len))
+                            index_possible = np.zeros(brain_slice.shape)
+                            index_possible[(mask_slice != 0) & (random_array > TRSH*10)] = 1
+                            index_possible = np.argwhere(index_possible)
 
-                            target_patches_np = np.array(target_patches)
-                            np.random.shuffle(target_patches_np)
+
+                            for index_chosen in index_possible:
+                                x, y = index_chosen
+                                area = get_area(x, y, patch_size[xy], patch_size[xy], brain_slice)
+                                if area.size == patch_size[xy] * patch_size[xy]:
+                                    if np.random.randint(low=1, high=10)/10 < (100/(x*y)) * num_samples:
+                                        pass
+                                    target_patches.append(area)
+                                    index_debug += 1
+
+
+                            target_patches_np = get_shuffled_patches(target_patches, num_samples)
                             target_patches_np = target_patches_np[0:num_samples,:,:]
-                            print('Sampling finished: ' + ' with: ' + str(index_debug) + ' samples from: '
-                                  + str(index_population))
+                            print('Sampling finished: ' + ' with: ' + str(index_debug) + ' samples from: ' + str(x_len * y_len))
                             area = []
 
                             ''''''
@@ -409,6 +418,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                             #if patch_size[xy] == 2:
                             #    code.interact(local=dict(globals(), **locals()))
 
+                            melvin = timer()
                             source_len = icv_source_flag_valid.shape[0]
                             loop_len = 512 # def: 512
                             loop_num = int(np.ceil(source_len / loop_len))
@@ -466,7 +476,8 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                                 del source_patches_loop  # Free memory
                                 #code.interact(local=dict(globals(), **locals()))
                             print(' - Finished!\n')
-
+                            print(timer() - melvin)
+                            raise Exception()
                         ''' Mapping from age_value_valid to age value_all '''
                         if valid == 1:
                             index = 0
@@ -490,7 +501,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                                 slice_age_map[ix,iy] = all_mean_distance_normed[index]
                                 index += 1
 
-                        ## Save mri_code
+                        ## Save mri_data
                         sio.savemat(dirOutData + '/' + str(patch_size[xy]) + '/' + str(zz) + '_dat.mat',
                                     {'slice_age_map':slice_age_map})
 
@@ -498,11 +509,11 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         print('GPU flushing..\n--\n')
                         numba.cuda.profile_stop()
                     elapsed_times_patch_all[timer_idx,xy] = timer() - one_patch
-                    print('IAM for MRI mri_code ID: ' + mri_code + ' with patch size: ' + str(patch_size[xy])
+                    print('IAM for MRI ID: ' + mri_code + ' with patch size: ' + str(patch_size[xy])
                           + ' elapsed for: ' + str(elapsed_times_patch_all[timer_idx,xy]))
 
-                elapsed_times_all[timer_idx] = timer() - one_mri_code
-                print('IAM for MRI mri_code ID: ' + mri_code + ' elapsed for: ' + str(elapsed_times_all[timer_idx]))
+                elapsed_times_all[timer_idx] = timer() - one_mri_data
+                print('IAM for MRI ID: ' + mri_code + ' elapsed for: ' + str(elapsed_times_all[timer_idx]))
                 timer_idx += 1
 
                 ''' Save all elapsed times '''
@@ -525,15 +536,15 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                 combined_age_map_mri = np.zeros((x_len, y_len, z_len))
                 combined_age_map_mri_mult = np.zeros((x_len, y_len, z_len))
                 combined_age_map_mri_mult_normed = np.zeros((x_len, y_len, z_len))
-                for zz in range(0, mri_mri_code.shape[2]):
-                    mri_slice = mri_mri_code[:,:,zz]
+                for zz in range(0, mri_data.shape[2]):
+                    mri_slice = mri_data[:,:,zz]
                     mask_slice = np.nan_to_num(mri_slice)
                     mask_slice[mask_slice > 0] = 1
                     penalty_slice = np.nan_to_num(mri_slice)   ### PENALTY
 
                     slice_age_map_all = np.zeros((len(patch_size), x_len, y_len))
 
-                    dirOutData = dirOutput + '/' + mri_code + '/' + version
+                    dirOutData = dirOutput + '/' + mri_code
                     for xy in range(0, len(patch_size)):
                         mat_contents = sio.loadmat(dirOutData + '/' + str(patch_size[xy]) + '/' + str(zz) + '_dat.mat')
                         slice_age_map = mat_contents['slice_age_map']
@@ -549,7 +560,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
 
                     if save_jpeg:
                         ''' >>> Part 0 <<<'''
-                        ''' Show all age maps based on patch's size and saving the mri_code '''
+                        ''' Show all age maps based on patch's size and saving the mri_data '''
                         fig, axes = plt.subplots(2, 2, sharex=True, sharey=True)
                         fig.set_size_inches(10, 10)
                         fig.suptitle('All Patches Gaussian Filtered', fontsize=16)
@@ -585,8 +596,8 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         plt.subplots_adjust(top=0.95)
 
                         ''' >>> Part 0 <<<'''
-                        ''' Save mri_code in *_all.jpg '''
-                        dirOutData = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Patch/'
+                        ''' Save mri_data in *_all.jpg '''
+                        dirOutData = dirOutput + '/' + mri_code + '/IAM_combined_python/Patch/'
                         fig.savefig(dirOutData + str(zz) + '_all.jpg', dpi=100)
                         print('Saving files: ' + dirOutData + str(zz) + '_all.jpg')
                         plt.close()
@@ -598,7 +609,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         combined_age_map += np.multiply(blending_weights[bi],slice_age_map_all[bi,:,:])
                     combined_age_map_mri[:,:,zz] = combined_age_map
 
-                    ''' Global Normalisation - saving needed mri_code '''
+                    ''' Global Normalisation - saving needed mri_data '''
                     combined_age_map_mri_mult[:,:,zz] = np.multiply(np.multiply(combined_age_map, penalty_slice), mask_slice)  ### PENALTY
                     normed_only = np.divide((combined_age_map_mri[:,:,zz] - np.min(combined_age_map_mri[:,:,zz])),\
                                             (np.max(combined_age_map_mri[:,:,zz]) - np.min(combined_age_map_mri[:,:,zz])))
@@ -607,8 +618,8 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                                             (np.max(normed_mult) - np.min(normed_mult)))
                     combined_age_map_mri_mult_normed[:,:,zz] = normed_mult_normed
 
-                    ''' Save mri_code in *.mat '''
-                    dirOutData = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Patch/'
+                    ''' Save mri_data in *.mat '''
+                    dirOutData = dirOutput + '/' + mri_code + '/IAM_combined_python/Patch/'
                     print('Saving files: ' + dirOutData + 'c' + str(zz) + '_combined.mat\n')
                     sio.savemat(dirOutData + 'c' + str(zz) + '_combined.mat', {'slice_age_map_all':slice_age_map_all,
                                                                 'combined_age_map':normed_only,
@@ -623,7 +634,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                                             (np.max(combined_age_map_mri_mult) - np.min(combined_age_map_mri_mult)))
 
                 if save_jpeg:
-                    for zz in range(0, mri_mri_code.shape[2]):
+                    for zz in range(0, mri_data.shape[2]):
                         fig2, axes2 = plt.subplots(1, 3)
                         fig2.set_size_inches(16,5)
 
@@ -640,7 +651,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         cbar2 = plt.colorbar(im2, ticks=[0, 0.5, 1], cax=cax2)
 
                         axes2[2].set_title('Original MRI slice')
-                        im3 = axes2[2].imshow(np.rot90(np.nan_to_num(mri_mri_code[:,:,zz])), cmap="gray")
+                        im3 = axes2[2].imshow(np.rot90(np.nan_to_num(mri_data[:,:,zz])), cmap="gray")
                         divider3 = make_axes_locatable(axes2[2])
                         cax3 = divider3.append_axes("right", size="7%", pad=0.05)
                         cbar3 = plt.colorbar(im3, cax=cax3)
@@ -649,14 +660,14 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                         # Make space for title
                         plt.subplots_adjust(top=0.95)
 
-                        ''' Save mri_code in *_combined.jpg '''
-                        dirOutData = dirOutput + '/' + mri_code + '/' + version + '/IAM_combined_python/Combined/'
+                        ''' Save mri_data in *_combined.jpg '''
+                        dirOutData = dirOutput + '/' + mri_code + '/IAM_combined_python/Combined/'
                         fig2.savefig(dirOutData + str(zz) + '_combined.jpg', dpi=100)
                         print('Saving files: ' + dirOutData + str(zz) + '_combined.jpg')
                         plt.close()
 
-                ''' Save mri_code in *.mat '''
-                sio.savemat(dirOutDataFin + '/all_slice_dat.mat', {'combined_age_map_all_slice':combined_age_map_mri,
+                ''' Save mri_data in *.mat '''
+                sio.savemat(dirOutDataCom + '/all_slice_dat.mat', {'combined_age_map_all_slice':combined_age_map_mri,
                                                    'mri_slice_mul_all_slice':combined_age_map_mri_mult,
                                                    'combined_age_map_mri_normed':combined_age_map_mri_normed,
                                                    'combined_age_map_mri_mult_normed':combined_age_map_mri_mult_normed})
@@ -685,7 +696,7 @@ def iam_lots_gpu_compute(output_filedir="", csv_filename="", patch_size=[1,2,4,8
                 if delete_intermediary:
                     shutil.rmtree(dirOutDataCom, ignore_errors=True)
                     for xy in range(0, len(patch_size)):
-                        shutil.rmtree(dirOutput + '/' + mri_code + '/' + version + '/' + str(patch_size[xy]), ignore_errors=True)
+                        shutil.rmtree(dirOutput + '/' + mri_code + '/' + str(patch_size[xy]), ignore_errors=True)
 
                 del temp
                 del center_source_patch, icv_source_flag

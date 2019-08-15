@@ -104,7 +104,7 @@ def iam_lots_gpu_compute(csv_filename="", patch_size=[1,2,4,8],
 
     OUTPUT:
 
-    The software will automatically create a new folder provided in "output_filedir" variable.
+    The software will automatically create a new folder, whose name is provided in the csv file.
     Please make sure that the directory is accessible and writable.
 
     Inside the experiment’s folder, each patient/MRI data will have its own folder. In default,
